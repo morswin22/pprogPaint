@@ -44,6 +44,8 @@ class MainWindow(tk.Frame):
         self.windows['layers'] = layers
 
         # Settings
+        global config
+
         settings = tk.Toplevel(self)
         settings.wm_withdraw()
         settings.wm_title('Ustawienia')
@@ -69,6 +71,24 @@ class MainWindow(tk.Frame):
         settings_size_he = tk.Entry(settings_size, textvariable=settings_size_he_sv)
         settings_size_he.bind('<Return>', (lambda _: self.change_config('MainWindow','height',settings_size_he.get())))
         settings_size_he.grid(row=1, column=1, sticky='W', padx=5, pady=2)
+
+        settings_windows = tk.LabelFrame(settings, text="Widok okien", padx=5, pady=5)
+        settings_windows.pack(padx=10, pady=10)
+
+        settings_windows_tc_sv = tk.StringVar()
+        settings_windows_tc_sv.set(config['Tools']['open'])
+        settings_windows_tc = tk.Checkbutton(settings_windows, text="Otwieraj narzędzia", \
+            variable=settings_windows_tc_sv, onvalue="yes", offvalue="no", command=(lambda: self.change_config('Tools','open',settings_windows_tc_sv.get())))
+        settings_windows_tc.grid(row=0, sticky='W', padx=5, pady=2)
+
+        settings_windows_lc_sv = tk.StringVar()
+        settings_windows_lc_sv.set(config['Layers']['open'])
+        settings_windows_lc = tk.Checkbutton(settings_windows, text="Otwieraj warstwy", \
+            variable=settings_windows_lc_sv, onvalue="yes", offvalue="no", command=(lambda: self.change_config('Layers','open',settings_windows_lc_sv.get())))
+        settings_windows_lc.grid(row=1, sticky='W', padx=5, pady=2)
+
+        settings_info = tk.Label(settings, text="Aby zapisać zmiany pól tekstowych, wciśnij klawisz Enter")
+        settings_info.pack(padx=5, pady=5)
 
         self.windows['settings'] = settings
 
