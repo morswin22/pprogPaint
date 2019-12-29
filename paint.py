@@ -48,7 +48,7 @@ class MainWindow(tk.Frame):
         if not self.config['open_tools']: tools.wm_withdraw()
         tools.wm_title('Narzędzia')
         tools.geometry("150x%d" % self.config['height'])
-        tools.protocol("WM_DELETE_WINDOW", self.close_tools)
+        tools.protocol("WM_DELETE_WINDOW",lambda: self.close_window('tools'))
 
         tools_colors = tk.LabelFrame(tools, text="Kolory")
         tools_colors.pack(expand=True)
@@ -95,7 +95,7 @@ class MainWindow(tk.Frame):
         if not self.config['open_layers']: layers.wm_withdraw()
         layers.wm_title('Warstwy')
         layers.geometry("150x%d" % self.config['height'])
-        layers.protocol("WM_DELETE_WINDOW", self.close_layers)
+        layers.protocol("WM_DELETE_WINDOW", lambda: self.close_window('layers'))
         self.windows['layers'] = layers
 
         # Settings
@@ -104,7 +104,7 @@ class MainWindow(tk.Frame):
         settings = tk.Toplevel(self)
         settings.wm_withdraw()
         settings.wm_title('Ustawienia')
-        settings.protocol("WM_DELETE_WINDOW", self.close_settings)
+        settings.protocol("WM_DELETE_WINDOW", lambda: self.close_window('settings'))
 
         settings_size = tk.LabelFrame(settings, text="Domyślna wielkość okna", padx=5, pady=5)
         settings_size.pack(padx=10, pady=10)
@@ -177,11 +177,11 @@ class MainWindow(tk.Frame):
         menubar.add_cascade(label="Plik", menu=fileMenu)
 
         viewMenu = tk.Menu(menubar)
-        viewMenu.add_command(label="Narzędzia", command=self.open_tools)
-        viewMenu.add_command(label="Warstwy", command=self.open_layers)
+        viewMenu.add_command(label="Narzędzia", command=lambda: self.open_window('tools'))
+        viewMenu.add_command(label="Warstwy", command=lambda: self.open_window('layers'))
         menubar.add_cascade(label="Widok", menu=viewMenu)
 
-        menubar.add_command(label="Ustawienia", command=self.open_settings)
+        menubar.add_command(label="Ustawienia", command=lambda: self.open_window('settings'))
 
     def c_point(self, event):
         off = self.c_size//2
@@ -227,26 +227,8 @@ class MainWindow(tk.Frame):
         self.canvas.delete(tk.ALL)
         self.canvas.create_rectangle(0, 0, self.config['cwidth']+2, self.config['cheight']+2, fill="white")
 
-    def open_layers(self):
-        self.open_window('layers')
-
-    def open_tools(self):
-        self.open_window('tools')
-
-    def open_settings(self):
-        self.open_window('settings')
-
     def open_window(self, id):
         self.windows[id].wm_deiconify()
-
-    def close_layers(self):
-        self.close_window('layers')
-
-    def close_tools(self):
-        self.close_window('tools')
-
-    def close_settings(self):
-        self.close_window('settings')
 
     def close_window(self, id):
         self.windows[id].wm_withdraw()
