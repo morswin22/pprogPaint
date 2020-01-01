@@ -12,6 +12,10 @@ def hex_to_rgb(value):
     h = value.lstrip('#')
     return tuple(int(h[i:i+2], 16) for i in (0, 2, 4))
 
+def color_distance(col_a, col_b):
+    r = (col_a[0] + col_b[0]) / 2
+    return (2 + r/256) * (col_a[0] - col_b[0])**2 + 4 * (col_a[1] - col_b[1])**2 + (2 + (255-r)/256) * (col_a[2] - col_b[2])**2
+
 class MainWindow(tk.Frame):
     config = {}
     windows = {"tools": None, "layers": None, "settings": None}
@@ -54,6 +58,7 @@ class MainWindow(tk.Frame):
         }
         self.c_set_color('black')
         self.c_size=1
+        self.c_bucket_calculating = False
 
     def configurate(self, config):
         self.config['width'] = int(config['MainWindow']['width']) or 800
@@ -254,7 +259,44 @@ class MainWindow(tk.Frame):
         self.c_mouse_last = pos
 
     def c_bucket(self, pos):
-        pass
+        d = 0.1
+        self.c_bucket_replacing = self.layer['surface'].get_at(pos)
+
+        if color_distance(self.c_bucket_replacing, self.c_color) > d:
+            self.c_bucket_stack = [pos]
+            self.c_bucket_visited = []
+
+            self.c_bucket_calculating = True
+            # TODO: Lock the canvas and the tools
+
+    def c_bucket_progress(self):
+        d = 0.1
+        pxarray = pygame.PixelArray(self.layer['surface'])
+
+        z = 0
+        while z < 200 and len(self.c_bucket_stack) > 0:
+            # TODO: Split this task into 2 subprocesses, first will stack.pop() and second will stack.shift()
+            pos = self.c_bucket_stack.pop()
+            while pos in self.c_bucket_stack:
+                self.c_bucket_stack.remove(pos)
+
+            pxarray[pos[0], pos[1]] = self.c_color
+            self.c_bucket_visited.append(pos)
+
+            for i in [-1, 0, 1]:
+                for j in [-1, 0, 1]:
+                    if 0 <= pos[0]+i < pxarray.shape[0]:
+                        if 0 <= pos[1]+j < pxarray.shape[1]:
+                            if (pos[0]+i, pos[1]+j) in self.c_bucket_visited:
+                                continue
+                            if color_distance(self.layer['surface'].get_at((pos[0]+i, pos[1]+j)), self.c_bucket_replacing) <= d:
+                                self.c_bucket_stack.append((pos[0]+i, pos[1]+j))
+            z += 1
+
+        self.c_bucket_visited = []
+
+        if len(self.c_bucket_stack) == 0:
+            self.c_bucket_calculating = False
 
     def c_set_color(self, color):
         if color != None:
@@ -284,6 +326,9 @@ class MainWindow(tk.Frame):
         self.listening = value
 
     def c_update(self):
+        if self.c_bucket_calculating:
+            self.c_bucket_progress()
+
         if self.listening:
             for event in pygame.event.get():
                 if event.type == pygame.MOUSEBUTTONDOWN:
