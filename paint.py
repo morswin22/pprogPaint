@@ -29,6 +29,7 @@ class MainWindow(tk.Frame):
     tool = 'brush'
 
     locked = False
+    info_layer = None
 
     def __init__(self, config):
         super().__init__()
@@ -47,6 +48,8 @@ class MainWindow(tk.Frame):
         self.canvas.fill(pygame.Color(255, 255, 255))
         pygame.display.init()
 
+        self.info_layer = pygame.Surface([self.config['cwidth'], self.config['cheight']], pygame.SRCALPHA, 32)
+
         self.c_add_layer()
         self.master.after(100,self.c_update)
         
@@ -58,11 +61,13 @@ class MainWindow(tk.Frame):
             'blue':   (0,   0,   255),
             'cyan':   (0,   255, 255),
             'yellow': (255, 255, 0),
-            'magenta':(255, 0,   255)
+            'magenta':(255, 0,   255),
+            'blank':  (255, 255, 255, 0)
         }
         self.c_set_color('black')
-        self.c_size=1
+        self.c_size=2
         self.c_bucket_calculating = False
+        self.c_shape_from = None
 
     def configurate(self, config):
         self.config['width'] = int(config['MainWindow']['width']) or 800
@@ -108,13 +113,18 @@ class MainWindow(tk.Frame):
                 row += 1
                 column = 0
 
+        self.tools_blank = ImageTk.PhotoImage(Image.open('./assets/blank.png'))
+        tools_color_blank = tk.Button(tools_colors, image=self.tools_blank)
+        tools_color_blank.bind("<Button-1>", lambda e: self.c_set_color('blank'))
+        tools_color_blank.grid(row=0, column=2, padx=2, pady=2)
+
         tools_colors_custom = tk.Button(tools_colors, bg="#ed5a53", text="?", fg="white", width=2, height=1)
         tools_colors_custom.bind("<Button-1>", lambda e: self.c_add_color(colorchooser.askcolor()))
-        tools_colors_custom.grid(row=0, column=2, padx=2, pady=2)
+        tools_colors_custom.grid(row=1, column=2, padx=2, pady=2)
 
         self.custom_colors = {}
         self.next_custom_color = 0
-        for i in range(1,10):
+        for i in range(2,10):
             btn = tk.Button(tools_colors, bg="white", width=2, height=1)
             btn.bind("<Button-1>", lambda e: self.c_set_color(self.custom_colors[e.widget]))
             btn.grid(row=i, column=2, padx=2, pady=2)
@@ -133,7 +143,7 @@ class MainWindow(tk.Frame):
         row = 0
         column = 0
         values = {}
-        for tool in ('brush','bucket'):
+        for tool in ('brush','bucket','square','rectangle','circle','ellipse'):
             btn = tk.Button(tools_tool, text=tool.capitalize())
             btn.bind("<Button-1>", lambda e: self.c_set_tool(values[e.widget]))
             btn.grid(row=row, column=column, padx=2, pady=2)
@@ -265,7 +275,7 @@ class MainWindow(tk.Frame):
         self.master.config(menu=menubar)
 
         fileMenu = tk.Menu(menubar)
-        fileMenu.add_command(label="Zapisz", command=lambda: self.c_capture(
+        fileMenu.add_command(label="Eksportuj", command=lambda: self.c_capture(
             filedialog.asksaveasfilename(title = "Wybierz plik",filetypes = (("pliki bmp","*.bmp"),("pliki jpeg","*.jpg"),("pliki png","*.png"),("pliki tga","*.tga"),("wszystkie pliki","*.*")))
         ))
         fileMenu.add_command(label="Wyjście", command=self.on_exit)
@@ -283,13 +293,59 @@ class MainWindow(tk.Frame):
             self.c_point(pos)
         elif self.tool == 'bucket':
             self.c_bucket(pos)
+        elif self.tool in ('rectangle', 'square','circle','ellipse'):
+            self.c_shape_start(pos)
 
     def c_use_tool(self, pos):
         if self.tool == 'brush':
             self.c_line(pos)
 
     def c_set_tool(self, tool):
+        if self.locked:
+            return 
+
         self.tool = tool
+        if tool in ('rectangle','square','circle','ellipse'):
+            self.c_shape_from = None
+
+    def c_shape_start(self, pos):
+        self.c_shape_from = pos
+
+    def c_shape_stop(self, pos):
+        if self.tool == 'rectangle':
+            pygame.draw.polygon(self.layer['surface'], self.c_color, [(self.c_shape_from[0],self.c_shape_from[1]),(pos[0],self.c_shape_from[1]),(pos[0],pos[1]),(self.c_shape_from[0],pos[1])])
+        elif self.tool == 'square':
+            w = self.c_shape_from[0] - pos[0]
+            h = self.c_shape_from[1] - pos[1]
+            wa, ha = abs(w), abs(h)
+            if (w <= 0 and h <= 0) or (w > 0 and h > 0):
+                if wa >= ha:
+                    pygame.draw.polygon(self.layer['surface'], self.c_color, [(self.c_shape_from[0],self.c_shape_from[1]),(self.c_shape_from[0]-w,self.c_shape_from[1]),(self.c_shape_from[0]-w,self.c_shape_from[1]-w),(self.c_shape_from[0],self.c_shape_from[1]-w)])
+                elif wa < ha:
+                    pygame.draw.polygon(self.layer['surface'], self.c_color, [(self.c_shape_from[0],self.c_shape_from[1]),(self.c_shape_from[0],self.c_shape_from[1]-h),(self.c_shape_from[0]-h,self.c_shape_from[1]-h),(self.c_shape_from[0]-h,self.c_shape_from[1])])
+            elif (w > 0 and h <= 0) or (w <= 0 and h > 0):
+                if wa >= ha:
+                    pygame.draw.polygon(self.layer['surface'], self.c_color, [(self.c_shape_from[0],self.c_shape_from[1]),(self.c_shape_from[0]-w,self.c_shape_from[1]),(self.c_shape_from[0]-w,self.c_shape_from[1]+w),(self.c_shape_from[0],self.c_shape_from[1]+w)])
+                elif wa < ha:
+                    pygame.draw.polygon(self.layer['surface'], self.c_color, [(self.c_shape_from[0],self.c_shape_from[1]),(self.c_shape_from[0],self.c_shape_from[1]-h),(self.c_shape_from[0]+h,self.c_shape_from[1]-h),(self.c_shape_from[0]+h,self.c_shape_from[1])])
+        elif self.tool == 'circle':
+            w = (pos[0] - self.c_shape_from[0]) // 2
+            h = (pos[1] - self.c_shape_from[1]) // 2
+            wa, ha = abs(w), abs(h)
+            if (w <= 0 and h <= 0) or (w > 0 and h > 0):
+                if wa < ha: w, wa = h, ha
+                pygame.draw.circle(self.layer['surface'], self.c_color, (self.c_shape_from[0]+w, self.c_shape_from[1]+w), wa)    
+            elif (w > 0 and h <= 0) or (w <= 0 and h > 0):
+                if wa < ha: w, wa = -h, ha
+                pygame.draw.circle(self.layer['surface'], self.c_color, (self.c_shape_from[0]+w, self.c_shape_from[1]-w), wa)
+        elif self.tool == 'ellipse':
+            w = pos[0] - self.c_shape_from[0]
+            h = pos[1] - self.c_shape_from[1]
+            wa, ha = abs(w), abs(h)
+            x = self.c_shape_from[0] if w > 0 else self.c_shape_from[0] + w
+            y = self.c_shape_from[1] if h > 0 else self.c_shape_from[1] + h
+            pygame.draw.ellipse(self.layer['surface'], self.c_color, (x, y, wa, ha))      
+        self.c_shape_from = None
 
     def c_point(self, pos):
         pygame.draw.circle(self.layer['surface'], self.c_color, pos, self.c_size//2)
@@ -319,6 +375,7 @@ class MainWindow(tk.Frame):
         z = 0
         while z < 200 and len(self.c_bucket_stack) > 0:
             # TODO: Split this task into 2 subprocesses, first will stack.pop() and second will stack.shift()
+            # https://docs.python.org/3/library/multiprocessing.html#sharing-state-between-processes
             pos = self.c_bucket_stack.pop()
             while pos in self.c_bucket_stack:
                 self.c_bucket_stack.remove(pos)
@@ -362,9 +419,9 @@ class MainWindow(tk.Frame):
                 if i==self.next_custom_color:
                     self.custom_colors[btn] = h
                     btn.config(bg=h)
-                    self.c_color = h
+                    self.c_set_color(h)
                     self.next_custom_color += 1
-                    if self.next_custom_color == 9:
+                    if self.next_custom_color == 8:
                         self.next_custom_color = 0
                     break
                 i+=1
@@ -376,20 +433,66 @@ class MainWindow(tk.Frame):
         if self.c_bucket_calculating:
             self.c_bucket_progress()
 
+        self.info_layer.fill((255,255,255,0))
+
         if self.listening and not self.locked:
+            pos = pygame.mouse.get_pos()
+            col = self.c_color if len(self.c_color) == 3 else (255,255,255)
+                
+            if self.tool == 'brush':
+                pygame.draw.circle(self.info_layer,col, pos, self.c_size//2)
+
+            if self.c_shape_from != None:
+                if self.tool == 'rectangle':
+                    pygame.draw.polygon(self.info_layer, col, [(self.c_shape_from[0],self.c_shape_from[1]),(pos[0],self.c_shape_from[1]),(pos[0],pos[1]),(self.c_shape_from[0],pos[1])])
+                elif self.tool == 'square':  
+                    w = self.c_shape_from[0] - pos[0]
+                    h = self.c_shape_from[1] - pos[1]
+                    wa, ha = abs(w), abs(h)
+                    if (w <= 0 and h <= 0) or (w > 0 and h > 0):
+                        if wa >= ha:
+                            pygame.draw.polygon(self.info_layer, col, [(self.c_shape_from[0],self.c_shape_from[1]),(self.c_shape_from[0]-w,self.c_shape_from[1]),(self.c_shape_from[0]-w,self.c_shape_from[1]-w),(self.c_shape_from[0],self.c_shape_from[1]-w)])
+                        elif wa < ha:
+                            pygame.draw.polygon(self.info_layer, col, [(self.c_shape_from[0],self.c_shape_from[1]),(self.c_shape_from[0],self.c_shape_from[1]-h),(self.c_shape_from[0]-h,self.c_shape_from[1]-h),(self.c_shape_from[0]-h,self.c_shape_from[1])])
+                    elif (w > 0 and h <= 0) or (w <= 0 and h > 0):
+                        if wa >= ha:
+                            pygame.draw.polygon(self.info_layer, col, [(self.c_shape_from[0],self.c_shape_from[1]),(self.c_shape_from[0]-w,self.c_shape_from[1]),(self.c_shape_from[0]-w,self.c_shape_from[1]+w),(self.c_shape_from[0],self.c_shape_from[1]+w)])
+                        elif wa < ha:
+                            pygame.draw.polygon(self.info_layer, col, [(self.c_shape_from[0],self.c_shape_from[1]),(self.c_shape_from[0],self.c_shape_from[1]-h),(self.c_shape_from[0]+h,self.c_shape_from[1]-h),(self.c_shape_from[0]+h,self.c_shape_from[1])])
+                elif self.tool == 'circle':
+                    w = (pos[0] - self.c_shape_from[0]) // 2
+                    h = (pos[1] - self.c_shape_from[1]) // 2
+                    wa, ha = abs(w), abs(h)
+                    if (w <= 0 and h <= 0) or (w > 0 and h > 0):
+                        if wa < ha: w, wa = h, ha
+                        pygame.draw.circle(self.info_layer, col, (self.c_shape_from[0]+w, self.c_shape_from[1]+w), wa)    
+                    elif (w > 0 and h <= 0) or (w <= 0 and h > 0):
+                        if wa < ha: w, wa = -h, ha
+                        pygame.draw.circle(self.info_layer, col, (self.c_shape_from[0]+w, self.c_shape_from[1]-w), wa)  
+                elif self.tool == 'ellipse':
+                    w = pos[0] - self.c_shape_from[0]
+                    h = pos[1] - self.c_shape_from[1]
+                    wa, ha = abs(w), abs(h)
+                    x = self.c_shape_from[0] if w > 0 else self.c_shape_from[0] + w
+                    y = self.c_shape_from[1] if h > 0 else self.c_shape_from[1] + h
+                    pygame.draw.ellipse(self.info_layer, col, (x, y, wa, ha))    
+
             for event in pygame.event.get():
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     self.pressed = True
-                    self.c_use_tool_start(pygame.mouse.get_pos())
+                    self.c_use_tool_start(pos)
                 elif event.type == pygame.MOUSEMOTION and self.pressed:
-                    self.c_use_tool(pygame.mouse.get_pos())
+                    self.c_use_tool(pos)
                 elif event.type == pygame.MOUSEBUTTONUP:
                     self.pressed = False
+                    if self.tool in ('rectangle','square','circle','ellipse'):
+                        self.c_shape_stop(pos)
 
         self.canvas.fill(pygame.Color(255, 255, 255))
         for layer in self.layers:
             if layer != None and layer['visible']:
                 self.canvas.blit(layer['surface'], (0,0))
+        self.canvas.blit(self.info_layer, (0,0))
         pygame.display.update()
         self.master.after(1,self.c_update)
 
@@ -398,6 +501,7 @@ class MainWindow(tk.Frame):
             return
 
         layer = pygame.Surface([self.config['cwidth'], self.config['cheight']], pygame.SRCALPHA, 32)
+        layer.fill((255,255,255,0))
         i = len(self.layers)
         self.layerID = i
         self.layers.append({'name': 'Warstwa %d' % (self.layerID + 1), 'surface': layer, 'visible': True})
