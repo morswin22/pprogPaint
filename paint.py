@@ -489,10 +489,11 @@ class MainWindow(tk.Frame):
                         self.c_shape_stop(pos)
 
         self.canvas.fill(pygame.Color(255, 255, 255))
-        for layer in self.layers:
-            if layer != None and layer['visible']:
-                self.canvas.blit(layer['surface'], (0,0))
-        self.canvas.blit(self.info_layer, (0,0))
+        for i in range(len(self.layers)):
+            if self.layers[i] != None and self.layers[i]['visible']:
+                self.canvas.blit(self.layers[i]['surface'], (0,0))
+                if i == self.layerID: 
+                    self.canvas.blit(self.info_layer, (0,0))   
         pygame.display.update()
         self.master.after(1,self.c_update)
 
@@ -601,6 +602,11 @@ class MainWindow(tk.Frame):
         temp = self.layers[id+direction]
         self.layers[id+direction] = self.layers[id]
         self.layers[id] = temp
+
+        if self.layerID == id:
+            self.layerID = id+direction
+        elif self.layerID == id+direction:
+            self.layerID = id
 
         self.c_update_layers()
 
