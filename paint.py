@@ -28,6 +28,8 @@ class MainWindow(tk.Frame):
     listening = False
     tool = 'brush'
 
+    locked = False
+
     def __init__(self, config):
         super().__init__()
 
@@ -263,7 +265,9 @@ class MainWindow(tk.Frame):
         self.master.config(menu=menubar)
 
         fileMenu = tk.Menu(menubar)
-        # fileMenu.add_command(label="Zapisz", command=lambda: self.save_canvas(filedialog.asksaveasfilename(title = "Wybierz plik",filetypes = (("pliki jpeg","*.jpg"),("wszystkie pliki","*.*")))))
+        fileMenu.add_command(label="Zapisz", command=lambda: self.c_capture(
+            filedialog.asksaveasfilename(title = "Wybierz plik",filetypes = (("pliki bmp","*.bmp"),("pliki jpeg","*.jpg"),("pliki png","*.png"),("pliki tga","*.tga"),("wszystkie pliki","*.*")))
+        ))
         fileMenu.add_command(label="Wyjście", command=self.on_exit)
         menubar.add_cascade(label="Plik", menu=fileMenu)
 
@@ -306,7 +310,7 @@ class MainWindow(tk.Frame):
             self.c_bucket_visited = []
 
             self.c_bucket_calculating = True
-            # TODO: Lock the canvas and the tools
+            self.locked = True
 
     def c_bucket_progress(self):
         d = 0.1
@@ -336,8 +340,12 @@ class MainWindow(tk.Frame):
 
         if len(self.c_bucket_stack) == 0:
             self.c_bucket_calculating = False
+            self.locked = False
 
     def c_set_color(self, color):
+        if self.locked:
+            return
+
         if color != None:
             if color not in self.c_colors.keys():
                 self.c_colors[color] = hex_to_rgb(color)
@@ -368,7 +376,7 @@ class MainWindow(tk.Frame):
         if self.c_bucket_calculating:
             self.c_bucket_progress()
 
-        if self.listening:
+        if self.listening and not self.locked:
             for event in pygame.event.get():
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     self.pressed = True
@@ -386,6 +394,9 @@ class MainWindow(tk.Frame):
         self.master.after(1,self.c_update)
 
     def c_add_layer(self):
+        if self.locked:
+            return
+
         layer = pygame.Surface([self.config['cwidth'], self.config['cheight']], pygame.SRCALPHA, 32)
         i = len(self.layers)
         self.layerID = i
@@ -419,6 +430,9 @@ class MainWindow(tk.Frame):
         self.c_update_layers()
 
     def c_open_layer(self, id):
+        if self.locked:
+            return
+
         self.layerID = id
         self.layer = self.layers[self.layerID]
         self.c_cursor_layer()
@@ -487,7 +501,7 @@ class MainWindow(tk.Frame):
         self.c_update_layers()
 
     def c_delete_layer(self, id):
-        if self.c_len_layers() == 1:
+        if self.c_len_layers() == 1 or self.locked:
             return
 
         for el in self.layers[id]['elements']:
@@ -523,6 +537,10 @@ class MainWindow(tk.Frame):
             if layer != None:
                 l += 1
         return l
+
+    def c_capture(self, filename):
+        if filename != '':
+            pygame.image.save(self.canvas, filename)
 
     def open_window(self, id):
         self.windows[id].wm_deiconify()
