@@ -312,6 +312,9 @@ class MainWindow(tk.Frame):
         self.c_shape_from = pos
 
     def c_shape_stop(self, pos):
+        if self.c_shape_from == None:
+            return
+
         if self.tool == 'rectangle':
             pygame.draw.polygon(self.layer['surface'], self.c_color, [(self.c_shape_from[0],self.c_shape_from[1]),(pos[0],self.c_shape_from[1]),(pos[0],pos[1]),(self.c_shape_from[0],pos[1])])
         elif self.tool == 'square':
