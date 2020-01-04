@@ -44,7 +44,7 @@ class MainWindow(tk.Frame):
         os.environ['SDL_WINDOWID'] = str(self.embed.winfo_id())
         if platform.system() == "Windows":
             os.environ['SDL_VIDEODRIVER'] = 'windib'
-        self.canvas = pygame.display.set_mode((self.config['cwidth'], self.config['cheight']))
+        self.canvas = pygame.display.set_mode((self.config['cwidth'], self.config['cheight']), pygame.RESIZABLE)
         self.canvas.fill(pygame.Color(255, 255, 255))
         pygame.display.init()
 
@@ -275,6 +275,13 @@ class MainWindow(tk.Frame):
         self.master.config(menu=menubar)
 
         fileMenu = tk.Menu(menubar)
+        fileMenu.add_command(label="Nowy", command=self.c_new)
+        fileMenu.add_command(label="Otwórz", command=lambda: self.c_open(
+            filedialog.askopenfilename(title = "Otwórz plik",filetypes = (("pliki paint","*.paint"),("wszystkie pliki","*.*")))
+        ))
+        fileMenu.add_command(label="Zapisz", command=lambda: self.c_save(
+            filedialog.asksaveasfilename(title = "Wybierz plik",filetypes = (("pliki paint","*.paint"),("wszystkie pliki","*.*")))
+        ))
         fileMenu.add_command(label="Eksportuj", command=lambda: self.c_capture(
             filedialog.asksaveasfilename(title = "Wybierz plik",filetypes = (("pliki bmp","*.bmp"),("pliki jpeg","*.jpg"),("pliki png","*.png"),("pliki tga","*.tga"),("wszystkie pliki","*.*")))
         ))
@@ -654,6 +661,41 @@ class MainWindow(tk.Frame):
     def c_capture(self, filename):
         if filename != '':
             pygame.image.save(self.canvas, filename)
+
+    def c_save(self, filename):
+        if filename != '':
+            file = "%dx%d\n" % (self.config['cwidth'], self.config['cheight'])
+            for layer in self.layers:
+                file += "{}\t{}\n".format(layer['name'], pygame.image.tostring(layer['surface'], 'RGBA'))
+            with open(filename, "w") as paint_file:
+                print(file, file=paint_file)
+
+    def c_open(self, filename):
+        if filename != '':
+            with open(filename, "r") as paint_file:
+                lines = paint_file.readlines() 
+                w, h = re.search(r'(\d+)x(\d+)\n', lines[0]).groups()
+                self.config['cwidth'] = int(w)
+                self.config['cheight'] = int(h)
+                self.embed.config(width=self.config['cwidth'], height=self.config['cheight'])
+                self.canvas = pygame.display.set_mode((self.config['cwidth'], self.config['cheight']), pygame.RESIZABLE)
+                self.canvas.fill(pygame.Color(255, 0, 255))
+                for layer in self.layers:
+                    for el in layer['elements']:
+                        el.grid_forget()
+                self.layers = []
+                for line in lines[1:-1]:
+                    name, surface_data = re.search(r'(.+)\t(b\'[^\']+\')', line).groups()
+                    self.c_add_layer()
+                    self.c_rename_layer(self.layerID, name)
+                    self.layer['surface'].blit(pygame.image.fromstring(eval(surface_data), (self.config['cwidth'], self.config['cheight']), 'RGBA'), (0,0))
+
+    def c_new(self):
+        for layer in self.layers:
+            for el in layer['elements']:
+                el.grid_forget()
+        self.layers = []
+        self.c_add_layer()
 
     def open_window(self, id):
         self.windows[id].wm_deiconify()
