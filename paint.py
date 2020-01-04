@@ -27,7 +27,7 @@ class MainWindow(tk.Frame):
     pressed = False
     listening = False
     tool = 'brush'
-    tools = {'brush': 'Pędzel','bucket': 'Wiaderko','square': 'Kwadrat','rectangle': 'Prostokąt','circle': 'Koło','ellipse': 'Elipsa'}
+    tools = {'brush': 'Pędzel','line': 'Linia','ink': 'Pipeta','bucket': 'Wiaderko','square': 'Kwadrat','rectangle': 'Prostokąt','circle': 'Koło','ellipse': 'Elipsa'}
 
     locked = False
     info_layer = None
@@ -148,7 +148,7 @@ class MainWindow(tk.Frame):
         row = 0
         column = 0
         values = {}
-        for tool in ('brush','bucket','square','rectangle','circle','ellipse'):
+        for tool in ('brush','line','ink','bucket','square','rectangle','circle','ellipse'):
             btn = tk.Button(tools_tool, text=self.tools[tool])
             btn.bind("<Button-1>", lambda e: self.c_set_tool(values[e.widget]))
             btn.grid(row=row, column=column, padx=2, pady=2)
@@ -305,8 +305,10 @@ class MainWindow(tk.Frame):
             self.c_point(pos)
         elif self.tool == 'bucket':
             self.c_bucket(pos)
-        elif self.tool in ('rectangle', 'square','circle','ellipse'):
+        elif self.tool in ('rectangle', 'square','circle','ellipse','line'):
             self.c_shape_start(pos)
+        elif self.tool == 'ink':
+            self.c_set_color(self.c_get_color(pos))
 
     def c_use_tool(self, pos):
         if self.tool == 'brush':
@@ -317,7 +319,7 @@ class MainWindow(tk.Frame):
             return 
 
         self.tool = tool
-        if tool in ('rectangle','square','circle','ellipse'):
+        if tool in ('rectangle','square','circle','ellipse','line'):
             self.c_shape_from = None
 
     def c_shape_start(self, pos):
@@ -359,7 +361,9 @@ class MainWindow(tk.Frame):
             wa, ha = abs(w), abs(h)
             x = self.c_shape_from[0] if w > 0 else self.c_shape_from[0] + w
             y = self.c_shape_from[1] if h > 0 else self.c_shape_from[1] + h
-            pygame.draw.ellipse(self.layer['surface'], self.c_color, (x, y, wa, ha))      
+            pygame.draw.ellipse(self.layer['surface'], self.c_color, (x, y, wa, ha))     
+        elif self.tool == 'line':
+            pygame.draw.line(self.layer['surface'], self.c_color, self.c_shape_from, pos, self.c_size)     
         self.c_shape_from = None
 
     def c_point(self, pos):
@@ -422,6 +426,10 @@ class MainWindow(tk.Frame):
             if color not in self.c_colors.keys():
                 self.c_colors[color] = hex_to_rgb(color)
             self.c_color = self.c_colors[color]
+
+    def c_get_color(self, pos):
+        r,g,b,_=self.layer['surface'].get_at(pos)
+        return "#{0:02x}{1:02x}{2:02x}".format(max(0,min(r,255)),max(0,min(g,255)),max(0,min(b,255)))
 
     def c_set_size(self, event):
         self.c_size = int(re.search(r'\d+', event.widget.get()).group())
@@ -491,6 +499,8 @@ class MainWindow(tk.Frame):
                     x = self.c_shape_from[0] if w > 0 else self.c_shape_from[0] + w
                     y = self.c_shape_from[1] if h > 0 else self.c_shape_from[1] + h
                     pygame.draw.ellipse(self.info_layer, col, (x, y, wa, ha))    
+                elif self.tool == 'line':
+                    pygame.draw.line(self.info_layer, col, self.c_shape_from, pos, self.c_size)    
 
             for event in pygame.event.get():
                 if event.type == pygame.MOUSEBUTTONDOWN:
@@ -500,7 +510,7 @@ class MainWindow(tk.Frame):
                     self.c_use_tool(pos)
                 elif event.type == pygame.MOUSEBUTTONUP:
                     self.pressed = False
-                    if self.tool in ('rectangle','square','circle','ellipse'):
+                    if self.tool in ('rectangle','square','circle','ellipse','line'):
                         self.c_shape_stop(pos)
 
         self.canvas.fill(pygame.Color(255, 255, 255))
