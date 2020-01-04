@@ -27,6 +27,7 @@ class MainWindow(tk.Frame):
     pressed = False
     listening = False
     tool = 'brush'
+    tools = {'brush': 'Pędzel','bucket': 'Wiaderko','square': 'Kwadrat','rectangle': 'Prostokąt','circle': 'Koło','ellipse': 'Elipsa'}
 
     locked = False
     info_layer = None
@@ -81,6 +82,7 @@ class MainWindow(tk.Frame):
         self.config['colors'] = []
         for i in range(20):
             self.config['colors'].append(config['Tools']['c%d' % i])
+        self.config['status_spacing'] = int(config['MainWindow']['status_spacing']) or 30
 
     def initUI(self):
         self.master.title("Paint")
@@ -89,6 +91,9 @@ class MainWindow(tk.Frame):
 
         self.embed = tk.Frame(self, width=self.config['cwidth'], height=self.config['cheight'], background="white")
         self.embed.pack()
+
+        self.statusbar = tk.Label(self.master, text="Ładowanie...", bd=1, relief=tk.SUNKEN, anchor=tk.W)
+        self.statusbar.pack(side=tk.BOTTOM, fill=tk.X)
 
         # Tools aside
         tools = tk.Toplevel(self)
@@ -144,7 +149,7 @@ class MainWindow(tk.Frame):
         column = 0
         values = {}
         for tool in ('brush','bucket','square','rectangle','circle','ellipse'):
-            btn = tk.Button(tools_tool, text=tool.capitalize())
+            btn = tk.Button(tools_tool, text=self.tools[tool])
             btn.bind("<Button-1>", lambda e: self.c_set_tool(values[e.widget]))
             btn.grid(row=row, column=column, padx=2, pady=2)
             values[btn] = tool
@@ -444,9 +449,9 @@ class MainWindow(tk.Frame):
             self.c_bucket_progress()
 
         self.info_layer.fill((255,255,255,0))
+        pos = pygame.mouse.get_pos()
 
         if self.listening and not self.locked:
-            pos = pygame.mouse.get_pos()
             col = self.c_color if len(self.c_color) == 3 else (255,255,255)
                 
             if self.tool == 'brush':
@@ -505,6 +510,13 @@ class MainWindow(tk.Frame):
                 if i == self.layerID: 
                     self.canvas.blit(self.info_layer, (0,0))   
         pygame.display.update()
+        self.statusbar.config(text="%s| %s| %s| %s| %s" % (
+            "Narzędzie: {}".format(self.tools[self.tool]).ljust(self.config['status_spacing']), 
+            "Grubość: {}px".format(self.c_size).ljust(self.config['status_spacing']),
+            "Kolor: {}, {}, {}".format(self.c_color[0], self.c_color[1], self.c_color[2]).ljust(self.config['status_spacing']), 
+            "Współrzędne: {}, {}".format(pos[0], pos[1]).ljust(self.config['status_spacing']),
+            "Początek: {}, {}".format(*(self.c_shape_from[0], self.c_shape_from[1]) if self.c_shape_from != None else ('?','?')).ljust(self.config['status_spacing']), 
+        ))
         self.master.after(1,self.c_update)
 
     def c_add_layer(self):
