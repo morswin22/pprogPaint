@@ -18,7 +18,7 @@ def color_distance(col_a, col_b):
 
 class MainWindow(tk.Frame):
     config = {}
-    windows = {"tools": None, "layers": None, "settings": None, "layer_rename": None, "canvas_resize": None}
+    windows = {"tools": None, "layers": None, "settings": None, "layer_rename": None, "canvas_resize": None, "canvas_new_size": None}
     layers = []
     layer = None
     layerID = None
@@ -297,6 +297,27 @@ class MainWindow(tk.Frame):
         self.canvas_resize_button.pack(pady=10)
 
         self.windows['canvas_resize'] = canvas_resize
+
+        # Canvas new size
+        canvas_new_size = tk.Toplevel(self)
+        canvas_new_size.wm_withdraw()
+        canvas_new_size.wm_title('Ustaw rozmiar płótna')
+        canvas_new_size.geometry('300x180')
+        canvas_new_size.protocol("WM_DELETE_WINDOW", lambda: self.close_window('canvas_new_size'))
+
+        canvas_new_size_frame = tk.Frame(canvas_new_size)
+        canvas_new_size_frame.pack(expand=True)
+
+        self.canvas_new_size_entry_w_sv = tk.StringVar()
+        self.canvas_new_size_entry_w = tk.Entry(canvas_new_size_frame, textvariable=self.canvas_new_size_entry_w_sv, width=30)
+        self.canvas_new_size_entry_w.pack(pady=10)
+        self.canvas_new_size_entry_h_sv = tk.StringVar()
+        self.canvas_new_size_entry_h = tk.Entry(canvas_new_size_frame, textvariable=self.canvas_new_size_entry_h_sv, width=30)
+        self.canvas_new_size_entry_h.pack(pady=10)
+        self.canvas_new_size_button = tk.Button(canvas_new_size_frame, text="Ustaw")
+        self.canvas_new_size_button.pack(pady=10)
+
+        self.windows['canvas_new_size'] = canvas_new_size
 
         # Menu
         menubar = tk.Menu(self.master)
@@ -766,8 +787,20 @@ class MainWindow(tk.Frame):
     def c_prompt_resize(self):
         self.canvas_resize_entry_w_sv.set(self.config['cwidth'])
         self.canvas_resize_entry_h_sv.set(self.config['cheight'])
-        self.canvas_resize_button.config(command=lambda: self.c_resize(int(self.canvas_resize_entry_w.get()), int(self.canvas_resize_entry_h.get())))
+        self.canvas_resize_button.config(command=lambda: [
+            self.c_resize(int(self.canvas_resize_entry_w.get()), int(self.canvas_resize_entry_h.get())), 
+            self.close_window('canvas_resize')
+        ])
         self.open_window('canvas_resize')
+
+    def c_prompt_new_size(self):
+        self.canvas_new_size_entry_w_sv.set(self.config['cwidth'])
+        self.canvas_new_size_entry_h_sv.set(self.config['cheight'])
+        self.canvas_new_size_button.config(command=lambda: [
+            self.c_resize(int(self.canvas_new_size_entry_w.get()), int(self.canvas_new_size_entry_h.get())),
+            self.close_window('canvas_new_size')
+        ])
+        self.open_window('canvas_new_size')
 
     def c_resize(self, w, h):
         self.config['cwidth'] = w
@@ -820,6 +853,7 @@ class MainWindow(tk.Frame):
         self.changes = []
         self.undone = []
         self.c_add_layer()
+        self.c_prompt_new_size()
 
     def open_window(self, id):
         self.windows[id].wm_deiconify()
