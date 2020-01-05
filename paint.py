@@ -714,6 +714,7 @@ class MainWindow(tk.Frame):
         self.config['cheight'] = h
         self.embed.config(width=self.config['cwidth'], height=self.config['cheight'])
         self.canvas = pygame.display.set_mode((self.config['cwidth'], self.config['cheight']), pygame.RESIZABLE)
+        self.info_layer = pygame.Surface([self.config['cwidth'], self.config['cheight']], pygame.SRCALPHA, 32)
         for layer in self.layers:
             if layer != None:
                 surface = pygame.Surface([self.config['cwidth'], self.config['cheight']], pygame.SRCALPHA, 32)
