@@ -30,6 +30,10 @@ class MainWindow(tk.Frame):
     locked = False
     info_layer = None
 
+    changes_max = 10
+    changes = []
+    undone = []
+
     def __init__(self, config):
         super().__init__()
 
@@ -314,6 +318,8 @@ class MainWindow(tk.Frame):
 
         editMenu = tk.Menu(menubar)
         editMenu.add_command(label="Zmień rozmiar", command=self.c_prompt_resize)
+        editMenu.add_command(label="Cofnij", command=self.c_undo)
+        editMenu.add_command(label="Przywróć", command=self.c_redo)
         menubar.add_cascade(label="Edytuj", menu=editMenu)
 
         viewMenu = tk.Menu(menubar)
@@ -324,6 +330,14 @@ class MainWindow(tk.Frame):
         menubar.add_command(label="Ustawienia", command=lambda: self.open_window('settings'))
 
     def c_use_tool_start(self, pos):
+        if self.tool != 'ink':
+            if len(self.changes) == self.changes_max: 
+                self.changes.pop(0)
+            surface = pygame.Surface([self.config['cwidth'], self.config['cheight']], pygame.SRCALPHA, 32)
+            surface.blit(self.layer['surface'], (0,0))
+            self.changes.append({'id': self.layerID, 'surface': surface})
+            self.undone = []
+
         if self.tool == 'brush':
             self.c_point(pos)
         elif self.tool == 'bucket':
@@ -552,6 +566,32 @@ class MainWindow(tk.Frame):
         ))
         self.master.after(1,self.c_update)
 
+    def c_undo(self):
+        if self.locked or len(self.changes) == 0:
+            return
+
+        data = self.changes.pop()
+        redo = pygame.Surface([self.config['cwidth'], self.config['cheight']], pygame.SRCALPHA, 32)
+        redo.blit(self.layers[data['id']]['surface'], (0,0))
+        self.layers[data['id']]['surface'] = data['surface']
+
+        if len(self.undone) == self.changes_max: 
+            self.undone.pop(0)
+        self.undone.append({'id': data['id'], 'surface': redo})
+
+    def c_redo(self):
+        if self.locked or len(self.undone) == 0:
+            return
+
+        data = self.undone.pop()
+        undo = pygame.Surface([self.config['cwidth'], self.config['cheight']], pygame.SRCALPHA, 32)
+        undo.blit(self.layers[data['id']]['surface'], (0,0))
+        self.layers[data['id']]['surface'] = data['surface']
+
+        if len(self.changes) == self.changes_max: 
+            self.changes.pop(0)
+        self.changes.append({'id': data['id'], 'surface': undo})
+
     def c_add_layer(self):
         if self.locked:
             return
@@ -663,6 +703,18 @@ class MainWindow(tk.Frame):
         elif self.layerID == id+direction:
             self.layerID = id
 
+        for change in self.changes:
+            if change['id'] == id:
+                change['id'] = id+direction
+            elif change['id'] == id+direction:
+                change['id'] = id
+
+        for redo in self.undone:
+            if redo['id'] == id:
+                redo['id'] = id+direction
+            elif redo['id'] == id+direction:
+                redo['id'] = id
+
         self.c_update_layers()
 
     def c_delete_layer(self, id):
@@ -672,6 +724,14 @@ class MainWindow(tk.Frame):
         for el in self.layers[id]['elements']:
             el.grid_forget()
         self.layers[id] = None
+
+        for change in self.changes:
+            if change['id'] == id:
+                self.changes.remove(change)
+
+        for redo in self.undone:
+            if redo['id'] == id:
+                self.undone.remove(redo)
 
         if id == self.layerID:
             for i in range(len(self.layers)):
@@ -743,6 +803,8 @@ class MainWindow(tk.Frame):
                     for el in layer['elements']:
                         el.grid_forget()
                 self.layers = []
+                self.changes = []
+                self.undone = []
                 self.c_resize(int(w), int(h))
                 for line in lines[1:-1]:
                     name, surface_data = re.search(r'(.+)\t(b\'[^\']+\')', line).groups()
@@ -755,6 +817,8 @@ class MainWindow(tk.Frame):
             for el in layer['elements']:
                 el.grid_forget()
         self.layers = []
+        self.changes = []
+        self.undone = []
         self.c_add_layer()
 
     def open_window(self, id):
