@@ -3,8 +3,6 @@ from tkinter import colorchooser, filedialog, ttk
 import configparser, os, shutil
 import re
 
-from pprint import pprint
-
 import pygame
 import platform
 
@@ -20,7 +18,7 @@ def color_distance(col_a, col_b):
 
 class MainWindow(tk.Frame):
     config = {}
-    windows = {"tools": None, "layers": None, "settings": None, "layer_rename": None}
+    windows = {"tools": None, "layers": None, "settings": None, "layer_rename": None, "canvas_resize": None}
     layers = []
     layer = None
     layerID = None
@@ -275,6 +273,27 @@ class MainWindow(tk.Frame):
 
         self.windows['layer_rename'] = layer_rename
 
+        # Canvas resize
+        canvas_resize = tk.Toplevel(self)
+        canvas_resize.wm_withdraw()
+        canvas_resize.wm_title('Zmień rozmiar płótna')
+        canvas_resize.geometry('300x180')
+        canvas_resize.protocol("WM_DELETE_WINDOW", lambda: self.close_window('canvas_resize'))
+
+        canvas_resize_frame = tk.Frame(canvas_resize)
+        canvas_resize_frame.pack(expand=True)
+
+        self.canvas_resize_entry_w_sv = tk.StringVar()
+        self.canvas_resize_entry_w = tk.Entry(canvas_resize_frame, textvariable=self.canvas_resize_entry_w_sv, width=30)
+        self.canvas_resize_entry_w.pack(pady=10)
+        self.canvas_resize_entry_h_sv = tk.StringVar()
+        self.canvas_resize_entry_h = tk.Entry(canvas_resize_frame, textvariable=self.canvas_resize_entry_h_sv, width=30)
+        self.canvas_resize_entry_h.pack(pady=10)
+        self.canvas_resize_button = tk.Button(canvas_resize_frame, text="Zmień")
+        self.canvas_resize_button.pack(pady=10)
+
+        self.windows['canvas_resize'] = canvas_resize
+
         # Menu
         menubar = tk.Menu(self.master)
         self.master.config(menu=menubar)
@@ -292,6 +311,10 @@ class MainWindow(tk.Frame):
         ))
         fileMenu.add_command(label="Wyjście", command=self.on_exit)
         menubar.add_cascade(label="Plik", menu=fileMenu)
+
+        editMenu = tk.Menu(menubar)
+        editMenu.add_command(label="Zmień rozmiar", command=self.c_prompt_resize)
+        menubar.add_cascade(label="Edytuj", menu=editMenu)
 
         viewMenu = tk.Menu(menubar)
         viewMenu.add_command(label="Narzędzia", command=lambda: self.open_window('tools'))
@@ -680,6 +703,24 @@ class MainWindow(tk.Frame):
                 l += 1
         return l
 
+    def c_prompt_resize(self):
+        self.canvas_resize_entry_w_sv.set(self.config['cwidth'])
+        self.canvas_resize_entry_h_sv.set(self.config['cheight'])
+        self.canvas_resize_button.config(command=lambda: self.c_resize(int(self.canvas_resize_entry_w.get()), int(self.canvas_resize_entry_h.get())))
+        self.open_window('canvas_resize')
+
+    def c_resize(self, w, h):
+        self.config['cwidth'] = w
+        self.config['cheight'] = h
+        self.embed.config(width=self.config['cwidth'], height=self.config['cheight'])
+        self.canvas = pygame.display.set_mode((self.config['cwidth'], self.config['cheight']), pygame.RESIZABLE)
+        for layer in self.layers:
+            if layer != None:
+                surface = pygame.Surface([self.config['cwidth'], self.config['cheight']], pygame.SRCALPHA, 32)
+                surface.fill((255,255,255,0))
+                surface.blit(layer['surface'], (0,0))
+                layer['surface'] = surface
+
     def c_capture(self, filename):
         if filename != '':
             pygame.image.save(self.canvas, filename)
@@ -697,15 +738,11 @@ class MainWindow(tk.Frame):
             with open(filename, "r") as paint_file:
                 lines = paint_file.readlines() 
                 w, h = re.search(r'(\d+)x(\d+)\n', lines[0]).groups()
-                self.config['cwidth'] = int(w)
-                self.config['cheight'] = int(h)
-                self.embed.config(width=self.config['cwidth'], height=self.config['cheight'])
-                self.canvas = pygame.display.set_mode((self.config['cwidth'], self.config['cheight']), pygame.RESIZABLE)
-                self.canvas.fill(pygame.Color(255, 0, 255))
                 for layer in self.layers:
                     for el in layer['elements']:
                         el.grid_forget()
                 self.layers = []
+                self.c_resize(int(w), int(h))
                 for line in lines[1:-1]:
                     name, surface_data = re.search(r'(.+)\t(b\'[^\']+\')', line).groups()
                     self.c_add_layer()
