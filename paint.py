@@ -419,6 +419,7 @@ class MainWindow(tk.Frame):
         editMenu.add_command(label="Zmień rozmiar", command=self.c_prompt_resize)
         editMenu.add_command(label="Cofnij", command=self.c_undo)
         editMenu.add_command(label="Przywróć", command=self.c_redo)
+        editMenu.add_command(label="Przerwij wiaderko", command=self.c_bucket_shutdown)
         menubar.add_cascade(label="Edytuj", menu=editMenu)
 
         insertMenu = tk.Menu(menubar)
@@ -566,8 +567,13 @@ class MainWindow(tk.Frame):
         self.c_bucket_visited = []
 
         if len(self.c_bucket_stack) == 0:
-            self.c_bucket_calculating = False
-            self.locked = False
+            self.c_bucket_shutdown()
+
+    def c_bucket_shutdown(self):
+        self.c_bucket_calculating = False
+        self.locked = False
+        self.c_bucket_stack = []
+        self.c_bucket_visited = []
 
     def c_set_color(self, color):
         if self.locked:
