@@ -981,10 +981,21 @@ class MainWindow(tk.Frame):
         self.windows[id].wm_withdraw()
 
     def sync_windows(self, event=None):
-        x = self.master.winfo_x()
-        y = self.master.winfo_y()
-        self.windows['tools'].geometry("+%d+%d" % (x + self.master.winfo_width() + 4 ,y))
-        self.windows['layers'].geometry("+%d+%d" % (x - self.windows['layers'].winfo_width() - 4 ,y))
+        x, y = self.master.winfo_x(), self.master.winfo_y()
+        w, h = self.master.winfo_screenwidth(), self.master.winfo_screenheight()
+        mw, lw = self.master.winfo_width(), self.windows['layers'].winfo_width()
+        if x+mw+12 < w:
+            self.windows['tools'].geometry("+%d+%d" % (x + mw + 4 ,y))
+            self.windows['tools'].attributes('-topmost', 'false')
+        else:
+            self.windows['tools'].geometry("+%d+%d" % (x + mw - 4 - self.windows['tools'].winfo_width(), h/2 - self.windows['tools'].winfo_height()/2))
+            self.windows['tools'].attributes('-topmost', 'true')
+        if x+4 > 0:
+            self.windows['layers'].geometry("+%d+%d" % (x - lw - 4 ,y))
+            self.windows['layers'].attributes('-topmost', 'false')
+        else:
+            self.windows['layers'].geometry("+%d+%d" % (x + 4 , h/2 - self.windows['layers'].winfo_height()/2))
+            self.windows['layers'].attributes('-topmost', 'true')
 
     def change_config(self, master, key, value):
         global config
