@@ -26,7 +26,7 @@ class MainWindow(tk.Frame):
     pressed = False
     listening = False
     tool = 'brush'
-    tools = {'brush': 'Pędzel','line': 'Linia','ink': 'Pipeta','bucket': 'Wiaderko','square': 'Kwadrat','rectangle': 'Prostokąt','circle': 'Koło','ellipse': 'Elipsa'}
+    tools = {'brush': 'Pędzel','line': 'Linia','ink': 'Pipeta','bucket': 'Wiaderko','square': 'Kwadrat','rectangle': 'Prostokąt','circle': 'Koło','ellipse': 'Elipsa', 'image_import': 'Wstawianie zdjęcia'}
 
     locked = False
     info_layer = None
@@ -365,19 +365,34 @@ class MainWindow(tk.Frame):
         self.image_import_size_entry_y = tk.Entry(image_import_size, textvariable=self.image_import_size_entry_y_sv, width=10)
         self.image_import_size_entry_y.grid(row=1, column=1, pady=4)
 
+        self.image_import_size_check_f_sv = tk.StringVar()
+        self.image_import_size_check_f_sv.set('no')
+        image_import_size_check_f = tk.Checkbutton(image_import_size, text="Wybierz kursorem", 
+            variable=self.image_import_size_check_f_sv, onvalue="yes", offvalue="no", command=(lambda: self.c_image_import_config('from',self.image_import_size_check_f_sv.get())))
+        image_import_size_check_f.grid(row=2, columnspan=2, padx=5, pady=2)
+
+        sep = ttk.Separator(image_import_size)
+        sep.grid(row=3, columnspan=2, padx=5, pady=8)
+
         image_import_size_label_w = tk.Label(image_import_size, text="Szerokość:")
-        image_import_size_label_w.grid(row=2, column=0, pady=4, sticky='E')
+        image_import_size_label_w.grid(row=4, column=0, pady=4, sticky='E')
         self.image_import_size_entry_w_sv = tk.StringVar()
         self.image_import_size_entry_w = tk.Entry(image_import_size, textvariable=self.image_import_size_entry_w_sv, width=10)
-        self.image_import_size_entry_w.grid(row=2, column=1, pady=4)
+        self.image_import_size_entry_w.grid(row=4, column=1, pady=4)
         image_import_size_label_h = tk.Label(image_import_size, text="Wysokość:")
-        image_import_size_label_h.grid(row=3, column=0, pady=4, sticky='E')
+        image_import_size_label_h.grid(row=5, column=0, pady=4, sticky='E')
         self.image_import_size_entry_h_sv = tk.StringVar()
         self.image_import_size_entry_h = tk.Entry(image_import_size, textvariable=self.image_import_size_entry_h_sv, width=10)
-        self.image_import_size_entry_h.grid(row=3, column=1, pady=4)
+        self.image_import_size_entry_h.grid(row=5, column=1, pady=4)
+
+        self.image_import_size_check_t_sv = tk.StringVar()
+        self.image_import_size_check_t_sv.set('no')
+        image_import_size_check_t = tk.Checkbutton(image_import_size, text="Zaznacz kursorem", 
+            variable=self.image_import_size_check_t_sv, onvalue="yes", offvalue="no", command=(lambda: self.c_image_import_config('to',self.image_import_size_check_t_sv.get())))
+        image_import_size_check_t.grid(row=6, columnspan=2, padx=5, pady=2)
         
         self.image_import_size_button = tk.Button(image_import_size, text="Wstaw")
-        self.image_import_size_button.grid(row=4, columnspan=2, pady=10)
+        self.image_import_size_button.grid(row=7, columnspan=2, pady=10)
 
         self.windows['image_import'] = image_import
 
@@ -429,6 +444,11 @@ class MainWindow(tk.Frame):
             self.c_shape_start(pos)
         elif self.tool == 'ink':
             self.c_set_color(self.c_get_color(pos))
+        elif self.tool == 'image_import':
+            if self.c_image_import_conf['from'] == 'yes':
+                self.c_shape_start(pos)
+            else:
+                self.c_shape_start(self.c_image_import_conf['from'])
 
     def c_use_tool(self, pos):
         if self.tool == 'brush':
@@ -439,7 +459,7 @@ class MainWindow(tk.Frame):
             return 
 
         self.tool = tool
-        if tool in ('rectangle','square','circle','ellipse','line'):
+        if tool in ('rectangle','square','circle','ellipse','line', 'image_import'):
             self.c_shape_from = None
 
     def c_shape_start(self, pos):
@@ -484,6 +504,19 @@ class MainWindow(tk.Frame):
             pygame.draw.ellipse(self.layer['surface'], self.c_color, (x, y, wa, ha))     
         elif self.tool == 'line':
             pygame.draw.line(self.layer['surface'], self.c_color, self.c_shape_from, pos, self.c_size)     
+        elif self.tool == 'image_import':
+            if self.c_image_import_conf['to'] != 'yes':
+                w, h = self.c_image_import_conf['to']
+            else:
+                w = max(abs(pos[0] - self.c_shape_from[0]),1)
+                h = max(abs(pos[1] - self.c_shape_from[1]),1)
+            image = self.image_to_import['r']
+            ow, oh = image.size
+            if ow != w or oh != h:
+                image = image.resize((w,h), Image.ANTIALIAS)
+            py_image = pygame.image.fromstring(image.tobytes(), (w, h), image.mode)
+            self.layer['surface'].blit(py_image, (self.c_shape_from[0],self.c_shape_from[1]))
+            self.c_set_tool('brush')
         self.c_shape_from = None
 
     def c_point(self, pos):
@@ -618,7 +651,19 @@ class MainWindow(tk.Frame):
                     y = self.c_shape_from[1] if h > 0 else self.c_shape_from[1] + h
                     pygame.draw.ellipse(self.info_layer, col, (x, y, wa, ha))    
                 elif self.tool == 'line':
-                    pygame.draw.line(self.info_layer, col, self.c_shape_from, pos, self.c_size)    
+                    pygame.draw.line(self.info_layer, col, self.c_shape_from, pos, self.c_size)  
+                elif self.tool == 'image_import':
+                    if self.c_image_import_conf['to'] != 'yes':
+                        w, h = self.c_image_import_conf['to']
+                    else:
+                        w = max(abs(pos[0] - self.c_shape_from[0]),1)
+                        h = max(abs(pos[1] - self.c_shape_from[1]),1)
+                    image = self.image_to_import['r']
+                    ow, oh = image.size
+                    if ow != w or oh != h:
+                        image = image.resize((w,h), Image.ANTIALIAS)
+                    py_image = pygame.image.fromstring(image.tobytes(), (w, h), image.mode)
+                    self.info_layer.blit(py_image, (self.c_shape_from[0],self.c_shape_from[1]))
 
             for event in pygame.event.get():
                 if event.type == pygame.MOUSEBUTTONDOWN:
@@ -628,7 +673,7 @@ class MainWindow(tk.Frame):
                     self.c_use_tool(pos)
                 elif event.type == pygame.MOUSEBUTTONUP:
                     self.pressed = False
-                    if self.tool in ('rectangle','square','circle','ellipse','line'):
+                    if self.tool in ('rectangle','square','circle','ellipse','line','image_import'):
                         self.c_shape_stop(pos)
 
         self.canvas.fill(pygame.Color(255, 255, 255))
@@ -894,6 +939,13 @@ class MainWindow(tk.Frame):
         self.image_import_size_entry_y_sv.set(0)
         self.image_to_import = None
         self.image_import_size_button.config(command=lambda: self.close_window('image_import'))
+        self.c_image_import_conf = {'from': 'no', 'to': 'no'}
+        self.image_import_size_check_f_sv.set('no')
+        self.image_import_size_check_t_sv.set('no')
+        self.image_import_size_entry_x.config(state='normal')
+        self.image_import_size_entry_y.config(state='normal')
+        self.image_import_size_entry_w.config(state='normal')
+        self.image_import_size_entry_h.config(state='normal')
         self.open_window('image_import')
 
     def c_image_import_select(self, filename):
@@ -919,17 +971,40 @@ class MainWindow(tk.Frame):
             self.image_to_import['p'] = ImageTk.PhotoImage(self.image_to_import['r'].resize((int(w),int(h)), Image.ANTIALIAS))
             self.image_import_img.config(image=self.image_to_import['p'])
 
+    def c_image_import_config(self, key, value):
+        self.c_image_import_conf[key] = value
+        if key == 'from':
+            if value == 'yes':
+                self.image_import_size_entry_x.config(state='disable')
+                self.image_import_size_entry_y.config(state='disable')
+            else:
+                self.image_import_size_entry_x.config(state='normal')
+                self.image_import_size_entry_y.config(state='normal')
+        elif key == 'to':
+            if value == 'yes':
+                self.image_import_size_entry_w.config(state='disable')
+                self.image_import_size_entry_h.config(state='disable')
+            else:
+                self.image_import_size_entry_w.config(state='normal')
+                self.image_import_size_entry_h.config(state='normal')
+
     def c_image_import(self, image, x, y, w, h):
         if self.locked:
             return
     
-        self.c_add_change()
-    
-        ow, oh = image.size
-        if ow != w or oh != h:
-            image = image.resize((w,h), Image.ANTIALIAS)
-        py_image = pygame.image.fromstring(image.tobytes(), (w, h), image.mode)
-        self.layer['surface'].blit(py_image, (x,y))
+        if self.c_image_import_conf['from'] == 'yes' or self.c_image_import_conf['to'] == 'yes':
+            self.c_set_tool('image_import')
+            if self.c_image_import_conf['from'] != 'yes':
+                self.c_image_import_conf['from'] = (x,y)
+            if self.c_image_import_conf['to'] != 'yes':
+                self.c_image_import_conf['to'] = (w,h)
+        else:
+            self.c_add_change()
+            ow, oh = image.size
+            if ow != w or oh != h:
+                image = image.resize((w,h), Image.ANTIALIAS)
+            py_image = pygame.image.fromstring(image.tobytes(), (w, h), image.mode)
+            self.layer['surface'].blit(py_image, (x,y))
 
     def c_capture(self, filename):
         if filename != '':
