@@ -418,12 +418,7 @@ class MainWindow(tk.Frame):
 
     def c_use_tool_start(self, pos):
         if self.tool != 'ink':
-            if len(self.changes) == self.changes_max: 
-                self.changes.pop(0)
-            surface = pygame.Surface([self.config['cwidth'], self.config['cheight']], pygame.SRCALPHA, 32)
-            surface.blit(self.layer['surface'], (0,0))
-            self.changes.append({'id': self.layerID, 'surface': surface})
-            self.undone = []
+            self.c_add_change()
 
         if self.tool == 'brush':
             self.c_point(pos)
@@ -652,6 +647,14 @@ class MainWindow(tk.Frame):
         ))
         
         self.master.after(1,self.c_update)
+
+    def c_add_change(self):
+        if len(self.changes) == self.changes_max: 
+            self.changes.pop(0)
+        surface = pygame.Surface([self.config['cwidth'], self.config['cheight']], pygame.SRCALPHA, 32)
+        surface.blit(self.layer['surface'], (0,0))
+        self.changes.append({'id': self.layerID, 'surface': surface})
+        self.undone = []
 
     def c_undo(self):
         if self.locked or len(self.changes) == 0:
@@ -918,6 +921,8 @@ class MainWindow(tk.Frame):
     def c_image_import(self, image, x, y, w, h):
         if self.locked:
             return
+    
+        self.c_add_change()
     
         ow, oh = image.size
         if ow != w or oh != h:
