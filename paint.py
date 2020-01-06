@@ -1,12 +1,12 @@
 import tkinter as tk
 from tkinter import colorchooser, filedialog, ttk
-import configparser, os, shutil
-import re
-
-import pygame
-import platform
-
 from PIL import Image, ImageTk
+import pygame
+import configparser
+import os
+import shutil
+import re
+import platform
 
 def hex_to_rgb(value):
     h = value.lstrip('#')
@@ -43,7 +43,6 @@ class MainWindow(tk.Frame):
         self.embed.bind('<Enter>', lambda _: self.c_listening(True))
         self.embed.bind('<Leave>', lambda _: self.c_listening(False))
 
-
         os.environ['SDL_WINDOWID'] = str(self.embed.winfo_id())
         if platform.system() == "Windows":
             os.environ['SDL_VIDEODRIVER'] = 'windib'
@@ -77,13 +76,16 @@ class MainWindow(tk.Frame):
         self.config['height'] = int(config['MainWindow']['height']) or 600
         self.config['cwidth'] = int(config['Canvas']['width']) or 600
         self.config['cheight'] = int(config['Canvas']['height']) or 400
+
         if config['Tools']['open'] == 'yes': self.config['open_tools'] = True 
         else: self.config['open_tools'] = False
         if config['Layers']['open'] == 'yes': self.config['open_layers'] = True 
         else: self.config['open_layers'] = False
+
         self.config['colors'] = []
         for i in range(20):
             self.config['colors'].append(config['Tools']['c%d' % i])
+
         self.config['status_spacing'] = int(config['MainWindow']['status_spacing']) or 30
 
     def initUI(self):
@@ -287,14 +289,18 @@ class MainWindow(tk.Frame):
         canvas_resize_frame = tk.Frame(canvas_resize)
         canvas_resize_frame.pack(expand=True)
 
+        canvas_resize_label_w = tk.Label(canvas_resize_frame, text="Wysokość")
+        canvas_resize_label_w.grid(row=0, column=0, pady=5)
         self.canvas_resize_entry_w_sv = tk.StringVar()
-        self.canvas_resize_entry_w = tk.Entry(canvas_resize_frame, textvariable=self.canvas_resize_entry_w_sv, width=30)
-        self.canvas_resize_entry_w.pack(pady=10)
+        self.canvas_resize_entry_w = tk.Entry(canvas_resize_frame, textvariable=self.canvas_resize_entry_w_sv, width=20)
+        self.canvas_resize_entry_w.grid(row=0, column=1, pady=5)
+        canvas_resize_label_h = tk.Label(canvas_resize_frame, text="Szerokość")
+        canvas_resize_label_h.grid(row=1, column=0, pady=5)
         self.canvas_resize_entry_h_sv = tk.StringVar()
-        self.canvas_resize_entry_h = tk.Entry(canvas_resize_frame, textvariable=self.canvas_resize_entry_h_sv, width=30)
-        self.canvas_resize_entry_h.pack(pady=10)
+        self.canvas_resize_entry_h = tk.Entry(canvas_resize_frame, textvariable=self.canvas_resize_entry_h_sv, width=20)
+        self.canvas_resize_entry_h.grid(row=1, column=1, pady=5)
         self.canvas_resize_button = tk.Button(canvas_resize_frame, text="Zmień")
-        self.canvas_resize_button.pack(pady=10)
+        self.canvas_resize_button.grid(row=2, columnspan=2, pady=10)
 
         self.windows['canvas_resize'] = canvas_resize
 
@@ -308,14 +314,18 @@ class MainWindow(tk.Frame):
         canvas_new_size_frame = tk.Frame(canvas_new_size)
         canvas_new_size_frame.pack(expand=True)
 
+        canvas_new_size_label_w = tk.Label(canvas_new_size_frame, text="Wysokość")
+        canvas_new_size_label_w.grid(row=0, column=0, pady=5)
         self.canvas_new_size_entry_w_sv = tk.StringVar()
-        self.canvas_new_size_entry_w = tk.Entry(canvas_new_size_frame, textvariable=self.canvas_new_size_entry_w_sv, width=30)
-        self.canvas_new_size_entry_w.pack(pady=10)
+        self.canvas_new_size_entry_w = tk.Entry(canvas_new_size_frame, textvariable=self.canvas_new_size_entry_w_sv, width=20)
+        self.canvas_new_size_entry_w.grid(row=0, column=1, pady=5)
+        canvas_new_size_label_h = tk.Label(canvas_new_size_frame, text="Szerokość")
+        canvas_new_size_label_h.grid(row=1, column=0, pady=5)
         self.canvas_new_size_entry_h_sv = tk.StringVar()
-        self.canvas_new_size_entry_h = tk.Entry(canvas_new_size_frame, textvariable=self.canvas_new_size_entry_h_sv, width=30)
-        self.canvas_new_size_entry_h.pack(pady=10)
+        self.canvas_new_size_entry_h = tk.Entry(canvas_new_size_frame, textvariable=self.canvas_new_size_entry_h_sv, width=20)
+        self.canvas_new_size_entry_h.grid(row=1, column=1, pady=5)
         self.canvas_new_size_button = tk.Button(canvas_new_size_frame, text="Ustaw")
-        self.canvas_new_size_button.pack(pady=10)
+        self.canvas_new_size_button.grid(row=2, columnspan=2, pady=10)
 
         self.windows['canvas_new_size'] = canvas_new_size
 
@@ -335,7 +345,8 @@ class MainWindow(tk.Frame):
         self.image_import_empty = ImageTk.PhotoImage(Image.open("./assets/image_empty.png"))
         self.image_import_img = tk.Label(image_import_holder, cursor="hand2", image=self.image_import_empty)
         self.image_import_img.bind("<Button-1>", lambda _: self.c_image_import_select(
-            filedialog.askopenfilename(title = "Otwórz plik",filetypes = (("pliki bmp","*.bmp"),("pliki jpeg","*.jpg"),("pliki png","*.png"),("pliki tga","*.tga"),("wszystkie pliki","*.*")))
+            filedialog.askopenfilename(title = "Otwórz plik",filetypes = (
+                ("pliki bmp","*.bmp"),("pliki jpeg","*.jpg"),("pliki png","*.png"),("pliki tga","*.tga"),("wszystkie pliki","*.*")))
         ))
         self.image_import_img.pack(expand=True)
 
@@ -382,7 +393,8 @@ class MainWindow(tk.Frame):
             filedialog.asksaveasfilename(title = "Wybierz plik",filetypes = (("pliki paint","*.paint"),("wszystkie pliki","*.*")))
         ))
         fileMenu.add_command(label="Eksportuj", command=lambda: self.c_capture(
-            filedialog.asksaveasfilename(title = "Wybierz plik",filetypes = (("pliki bmp","*.bmp"),("pliki jpeg","*.jpg"),("pliki png","*.png"),("pliki tga","*.tga"),("wszystkie pliki","*.*")))
+            filedialog.asksaveasfilename(title = "Wybierz plik",filetypes = (
+                ("pliki bmp","*.bmp"),("pliki jpeg","*.jpg"),("pliki png","*.png"),("pliki tga","*.tga"),("wszystkie pliki","*.*")))
         ))
         fileMenu.add_command(label="Wyjście", command=self.on_exit)
         menubar.add_cascade(label="Plik", menu=fileMenu)
@@ -505,8 +517,6 @@ class MainWindow(tk.Frame):
 
         z = 0
         while z < 200 and len(self.c_bucket_stack) > 0:
-            # TODO: Split this task into 2 subprocesses, first will stack.pop() and second will stack.shift()
-            # https://docs.python.org/3/library/multiprocessing.html#sharing-state-between-processes
             pos = self.c_bucket_stack.pop()
             while pos in self.c_bucket_stack:
                 self.c_bucket_stack.remove(pos)
@@ -631,6 +641,7 @@ class MainWindow(tk.Frame):
                 self.canvas.blit(self.layers[i]['surface'], (0,0))
                 if i == self.layerID: 
                     self.canvas.blit(self.info_layer, (0,0))   
+        
         pygame.display.update()
         self.statusbar.config(text="%s| %s| %s| %s| %s" % (
             "Narzędzie: {}".format(self.tools[self.tool]).ljust(self.config['status_spacing']), 
@@ -639,6 +650,7 @@ class MainWindow(tk.Frame):
             "Współrzędne: {}, {}".format(pos[0], pos[1]).ljust(self.config['status_spacing']),
             "Początek: {}, {}".format(*(self.c_shape_from[0], self.c_shape_from[1]) if self.c_shape_from != None else ('?','?')).ljust(self.config['status_spacing']), 
         ))
+        
         self.master.after(1,self.c_update)
 
     def c_undo(self):
@@ -857,6 +869,9 @@ class MainWindow(tk.Frame):
         self.open_window('canvas_new_size')
 
     def c_resize(self, w, h):
+        if self.locked:
+            return
+        
         self.config['cwidth'] = w
         self.config['cheight'] = h
         self.embed.config(width=self.config['cwidth'], height=self.config['cheight'])
@@ -901,6 +916,9 @@ class MainWindow(tk.Frame):
             self.image_import_img.config(image=self.image_to_import['p'])
 
     def c_image_import(self, image, x, y, w, h):
+        if self.locked:
+            return
+    
         ow, oh = image.size
         if ow != w or oh != h:
             image = image.resize((w,h), Image.ANTIALIAS)
@@ -920,6 +938,9 @@ class MainWindow(tk.Frame):
                 print(file, file=paint_file)
 
     def c_open(self, filename):
+        if self.locked:
+            return
+
         if filename != '':
             with open(filename, "r") as paint_file:
                 lines = paint_file.readlines() 
