@@ -7,6 +7,7 @@ import os
 import shutil
 import re
 import platform
+import base64
 
 def hex_to_rgb(value):
     h = value.lstrip('#')
@@ -938,7 +939,7 @@ class MainWindow(tk.Frame):
         if filename != '':
             file = "%dx%d\n" % (self.config['cwidth'], self.config['cheight'])
             for layer in self.layers:
-                file += "{}\t{}\n".format(layer['name'], pygame.image.tostring(layer['surface'], 'RGBA'))
+                file += "{}\t{}\n".format(layer['name'], base64.b64encode(pygame.image.tostring(layer['surface'], 'RGBA')))
             with open(filename, "w") as paint_file:
                 print(file, file=paint_file)
 
@@ -961,7 +962,7 @@ class MainWindow(tk.Frame):
                     name, surface_data = re.search(r'(.+)\t(b\'[^\']+\')', line).groups()
                     self.c_add_layer()
                     self.c_rename_layer(self.layerID, name)
-                    self.layer['surface'].blit(pygame.image.fromstring(eval(surface_data), (self.config['cwidth'], self.config['cheight']), 'RGBA'), (0,0))
+                    self.layer['surface'].blit(pygame.image.fromstring(base64.b64decode(eval(surface_data)), (self.config['cwidth'], self.config['cheight']), 'RGBA'), (0,0))
 
     def c_new(self):
         for layer in self.layers:
