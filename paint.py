@@ -18,7 +18,7 @@ def color_distance(col_a, col_b):
 
 class MainWindow(tk.Frame):
     config = {}
-    windows = {"tools": None, "layers": None, "settings": None, "layer_rename": None, "canvas_resize": None, "canvas_new_size": None}
+    windows = {"tools": None, "layers": None, "settings": None, "layer_rename": None, "canvas_resize": None, "canvas_new_size": None, "image_import": None}
     layers = []
     layer = None
     layerID = None
@@ -319,6 +319,56 @@ class MainWindow(tk.Frame):
 
         self.windows['canvas_new_size'] = canvas_new_size
 
+        # Image import
+        image_import = tk.Toplevel(self)
+        image_import.wm_withdraw()
+        image_import.wm_title('Wstaw zdjęcie')
+        image_import.geometry('530x350')
+        image_import.protocol("WM_DELETE_WINDOW", lambda: self.close_window('image_import'))
+
+        image_import_frame = tk.Frame(image_import)
+        image_import_frame.pack(expand=True)
+
+        image_import_holder = tk.Frame(image_import_frame, width=300, height=300)
+        image_import_holder.grid(row=0, column=0, padx=25, pady=25)
+
+        self.image_import_empty = ImageTk.PhotoImage(Image.open("./assets/image_empty.png"))
+        self.image_import_img = tk.Label(image_import_holder, cursor="hand2", image=self.image_import_empty)
+        self.image_import_img.bind("<Button-1>", lambda _: self.c_image_import_select(
+            filedialog.askopenfilename(title = "Otwórz plik",filetypes = (("pliki bmp","*.bmp"),("pliki jpeg","*.jpg"),("pliki png","*.png"),("pliki tga","*.tga"),("wszystkie pliki","*.*")))
+        ))
+        self.image_import_img.pack(expand=True)
+
+        image_import_size = tk.Frame(image_import_frame)
+        image_import_size.grid(row=0, column=1, padx=25, pady=25)
+
+        image_import_size_label_x = tk.Label(image_import_size, text="x:")
+        image_import_size_label_x.grid(row=0, column=0, pady=4, sticky='E')
+        self.image_import_size_entry_x_sv = tk.StringVar()
+        self.image_import_size_entry_x = tk.Entry(image_import_size, textvariable=self.image_import_size_entry_x_sv, width=10)
+        self.image_import_size_entry_x.grid(row=0, column=1, pady=4)
+        image_import_size_label_y = tk.Label(image_import_size, text="y:")
+        image_import_size_label_y.grid(row=1, column=0, pady=4, sticky='E')
+        self.image_import_size_entry_y_sv = tk.StringVar()
+        self.image_import_size_entry_y = tk.Entry(image_import_size, textvariable=self.image_import_size_entry_y_sv, width=10)
+        self.image_import_size_entry_y.grid(row=1, column=1, pady=4)
+
+        image_import_size_label_w = tk.Label(image_import_size, text="Szerokość:")
+        image_import_size_label_w.grid(row=2, column=0, pady=4, sticky='E')
+        self.image_import_size_entry_w_sv = tk.StringVar()
+        self.image_import_size_entry_w = tk.Entry(image_import_size, textvariable=self.image_import_size_entry_w_sv, width=10)
+        self.image_import_size_entry_w.grid(row=2, column=1, pady=4)
+        image_import_size_label_h = tk.Label(image_import_size, text="Wysokość:")
+        image_import_size_label_h.grid(row=3, column=0, pady=4, sticky='E')
+        self.image_import_size_entry_h_sv = tk.StringVar()
+        self.image_import_size_entry_h = tk.Entry(image_import_size, textvariable=self.image_import_size_entry_h_sv, width=10)
+        self.image_import_size_entry_h.grid(row=3, column=1, pady=4)
+        
+        self.image_import_size_button = tk.Button(image_import_size, text="Wstaw")
+        self.image_import_size_button.grid(row=4, columnspan=2, pady=10)
+
+        self.windows['image_import'] = image_import
+
         # Menu
         menubar = tk.Menu(self.master)
         self.master.config(menu=menubar)
@@ -342,6 +392,10 @@ class MainWindow(tk.Frame):
         editMenu.add_command(label="Cofnij", command=self.c_undo)
         editMenu.add_command(label="Przywróć", command=self.c_redo)
         menubar.add_cascade(label="Edytuj", menu=editMenu)
+
+        insertMenu = tk.Menu(menubar)
+        insertMenu.add_command(label="Obraz", command=self.c_prompt_import_image)
+        menubar.add_cascade(label="Wstaw", menu=insertMenu)
 
         viewMenu = tk.Menu(menubar)
         viewMenu.add_command(label="Narzędzia", command=lambda: self.open_window('tools'))
@@ -814,6 +868,44 @@ class MainWindow(tk.Frame):
                 surface.fill((255,255,255,0))
                 surface.blit(layer['surface'], (0,0))
                 layer['surface'] = surface
+
+    def c_prompt_import_image(self):
+        self.image_import_img.config(image=self.image_import_empty)
+        self.image_import_size_entry_x_sv.set(0)
+        self.image_import_size_entry_y_sv.set(0)
+        self.image_to_import = None
+        self.image_import_size_button.config(command=lambda: self.close_window('image_import'))
+        self.open_window('image_import')
+
+    def c_image_import_select(self, filename):
+        if filename != '':
+            self.image_to_import = {'r': Image.open(filename)}
+            w, h = self.image_to_import['r'].size
+            self.image_import_size_entry_w_sv.set(w)
+            self.image_import_size_entry_h_sv.set(h)
+            if w > 300 or h > 300:
+                if w > h:
+                    h /= w/300
+                    w = 300
+                else:
+                    w /= h/300
+                    h = 300
+            self.image_import_size_button.config(command=lambda: [
+                self.c_image_import(
+                    self.image_to_import['r'], 
+                    int(self.image_import_size_entry_x.get()), int(self.image_import_size_entry_y.get()), 
+                    int(self.image_import_size_entry_w.get()), int(self.image_import_size_entry_h.get())),
+                self.close_window('image_import')
+            ])
+            self.image_to_import['p'] = ImageTk.PhotoImage(self.image_to_import['r'].resize((int(w),int(h)), Image.ANTIALIAS))
+            self.image_import_img.config(image=self.image_to_import['p'])
+
+    def c_image_import(self, image, x, y, w, h):
+        ow, oh = image.size
+        if ow != w or oh != h:
+            image = image.resize((w,h), Image.ANTIALIAS)
+        py_image = pygame.image.fromstring(image.tobytes(), (w, h), image.mode)
+        self.layer['surface'].blit(py_image, (x,y))
 
     def c_capture(self, filename):
         if filename != '':
