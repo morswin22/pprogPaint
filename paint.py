@@ -1,3 +1,10 @@
+"""
+Paint is my semester assignment for the programming lessons
+
+Author: Patryk Janiak
+Github: https://github.com/morswin22/pprogPaint
+License: MIT
+"""
 import tkinter as tk
 from tkinter import colorchooser, filedialog, ttk
 from PIL import Image, ImageTk
@@ -10,14 +17,42 @@ import platform
 import base64
 
 def hex_to_rgb(value):
+    """
+    This function converts hex color to rgb color
+
+    Parameters:
+        value (string): Given hex color in #RRGGBB format
+
+    Returns:
+        color (tuple): A tuple representing the rgb values
+    """
     h = value.lstrip('#')
     return tuple(int(h[i:i+2], 16) for i in (0, 2, 4))
 
 def color_distance(col_a, col_b):
+    """
+    This function calculates the Euclidean distance between two colors
+    The formula: https://en.wikipedia.org/wiki/Color_difference
+
+    Parameters:
+        col_a (tuple): A tuple with rgb values of color a
+        col_b (tuple): A tuple with rgb values of color b
+
+    Returns:
+        distance (int): The calculated distance between two colors
+    """
     r = (col_a[0] + col_b[0]) / 2
     return (2 + r/256) * (col_a[0] - col_b[0])**2 + 4 * (col_a[1] - col_b[1])**2 + (2 + (255-r)/256) * (col_a[2] - col_b[2])**2
 
 class MainWindow(tk.Frame):
+    """
+    The class which contains almost the whole application
+
+    Attributes and methods:
+        starting with c_: Are strictly connected to the canvas work
+        others: Are responsible for the GUI, etc.
+    """
+
     config = {}
     windows = {"tools": None, "layers": None, "settings": None, "layer_rename": None, "canvas_resize": None, "canvas_new_size": None, "image_import": None}
     layers = []
@@ -36,6 +71,14 @@ class MainWindow(tk.Frame):
     undone = []
 
     def __init__(self, config):
+        """
+        The constructor of MainWindow class
+        Sets up the event binding, pygame canvas and tkinter GUI
+        Sets the default values
+
+        Parameters:
+            config (list): Config data from a file
+        """
         super().__init__()
 
         self.configurate(config)
@@ -73,6 +116,12 @@ class MainWindow(tk.Frame):
         self.c_shape_from = None
 
     def configurate(self, config):
+        """
+        This function has to evaluate the config data
+
+        Parameters:
+            config (list): Config data from a file
+        """
         self.config['width'] = int(config['MainWindow']['width']) or 800
         self.config['height'] = int(config['MainWindow']['height']) or 600
         self.config['cwidth'] = int(config['Canvas']['width']) or 600
@@ -90,6 +139,9 @@ class MainWindow(tk.Frame):
         self.config['status_spacing'] = int(config['MainWindow']['status_spacing']) or 30
 
     def initUI(self):
+        """
+        This function creates the tkinter GUI
+        """
         self.master.title("Paint")
         self.master.geometry("%dx%d" % (self.config['width'],self.config['height']))
         self.pack(expand=True)
@@ -434,6 +486,13 @@ class MainWindow(tk.Frame):
         menubar.add_command(label="Ustawienia", command=lambda: self.open_window('settings'))
 
     def c_use_tool_start(self, pos):
+        """
+        This function allows the usage of tools
+        and it's called after pygame.MOUSEBUTTONDOWN event
+
+        Parameters:
+            pos (tuple): Mouse position on canvas
+        """
         if self.tool != 'ink':
             self.c_add_change()
 
@@ -452,10 +511,23 @@ class MainWindow(tk.Frame):
                 self.c_shape_start(self.c_image_import_conf['from'])
 
     def c_use_tool(self, pos):
+        """
+        This function allows the usage of tools
+        and it's called on pygame.MOUSEMOTION event
+
+        Parameters:
+            pos (tuple): Mouse position on canvas
+        """
         if self.tool == 'brush':
             self.c_line(pos)
 
     def c_set_tool(self, tool):
+        """
+        This function sets the current tool value
+
+        Parameters:
+            tool (string): The tool
+        """
         if self.locked:
             return 
 
@@ -464,9 +536,21 @@ class MainWindow(tk.Frame):
             self.c_shape_from = None
 
     def c_shape_start(self, pos):
+        """
+        This functions sets the starting position of a shape
+
+        Parameters:
+            pos (tuple): Mouse position on canvas
+        """
         self.c_shape_from = pos
 
     def c_shape_stop(self, pos):
+        """
+        This functions draws the selected shape
+
+        Parameters:
+            pos (tuple): Mouse position on canvas
+        """
         if self.c_shape_from == None:
             return
 
@@ -521,16 +605,37 @@ class MainWindow(tk.Frame):
         self.c_shape_from = None
 
     def c_point(self, pos):
+        """
+        This function is called after single click on the canvas
+        with the brush tool selected
+
+        Parameters:
+            pos (tuple): Mouse position on canvas
+        """
         pygame.draw.circle(self.layer['surface'], self.c_color, pos, self.c_size//2)
         self.c_mouse_last = pos
 
     def c_line(self, pos):
+        """
+        This function is called after moving the mouse on the canvas 
+        with mouse button pressed down and the brush tool selected
+
+        Parameters:
+            pos (tuple): Mouse position on canvas
+        """
         if self.c_size > 4:
             pygame.draw.circle(self.layer['surface'], self.c_color, pos, self.c_size//2)
         pygame.draw.line(self.layer['surface'], self.c_color, self.c_mouse_last, pos, self.c_size)
         self.c_mouse_last = pos
 
     def c_bucket(self, pos):
+        """
+        This function is called after single click on the canvas
+        with the bucket tool selected and it starts the bucket filling mode
+
+        Parameters:
+            pos (tuple): Mouse position on canvas
+        """
         d = 0.1
         self.c_bucket_replacing = self.layer['surface'].get_at(pos)
 
@@ -542,6 +647,12 @@ class MainWindow(tk.Frame):
             self.locked = True
 
     def c_bucket_progress(self):
+        """
+        This function is called after before every canvas update when the
+        self.c_bucket_calculating is set to True. It is similar to flood fill
+        algorithm so it is not the fastest and really shoud be running at the GPU
+        but that would create a need for OpenGL and Compute Shaders
+        """
         d = 0.1
         pxarray = pygame.PixelArray(self.layer['surface'])
 
@@ -570,12 +681,23 @@ class MainWindow(tk.Frame):
             self.c_bucket_shutdown()
 
     def c_bucket_shutdown(self):
+        """
+        This function was created as a emergency shutdown for the bucket tool
+        because when the bucket is processing then the canvas (and most of the
+        tkinter widgets enter locked mode) and there was no other option to end it sooner
+        """
         self.c_bucket_calculating = False
         self.locked = False
         self.c_bucket_stack = []
         self.c_bucket_visited = []
 
     def c_set_color(self, color):
+        """
+        This function allows to set the currently used color for drawing on canvas
+
+        Parameters:
+            color (string): Hex color value or color name from self.c_colors
+        """
         if self.locked:
             return
 
@@ -585,13 +707,34 @@ class MainWindow(tk.Frame):
             self.c_color = self.c_colors[color]
 
     def c_get_color(self, pos):
+        """
+        This function gets the color from the current layer at the given position
+
+        Parameters:
+            pos (tuple): Mouse position on canvas
+
+        Returns:
+            color (string): Hex color value
+        """
         r,g,b,_=self.layer['surface'].get_at(pos)
         return "#{0:02x}{1:02x}{2:02x}".format(max(0,min(r,255)),max(0,min(g,255)),max(0,min(b,255)))
 
     def c_set_size(self, event):
+        """
+        This function allows to set the currently used size for drawing on canvas
+
+        Parameters:
+            event (tkinter Event): Event from tkitner widget
+        """
         self.c_size = int(re.search(r'\d+', event.widget.get()).group())
 
     def c_add_color(self, values):
+        """
+        This function allows to add a new color for drawing on canvas
+
+        Parameters:
+            values (list): List containing the color data
+        """
         h = values[1]
         if h != None:
             i = 0
@@ -607,9 +750,20 @@ class MainWindow(tk.Frame):
                 i+=1
 
     def c_listening(self, value):
+        """
+        This function sets the self.listening value
+        which allows pygame to listen for events
+
+        Parameters:
+            value (boolean): True or False value
+        """
         self.listening = value
 
     def c_update(self):
+        """
+        This function is resposible for displaying graphics on canvas,
+        information and listening for pygame events 
+        """
         if self.c_bucket_calculating:
             self.c_bucket_progress()
 
@@ -701,6 +855,10 @@ class MainWindow(tk.Frame):
         self.master.after(1,self.c_update)
 
     def c_add_change(self):
+        """
+        This function adds the current layer to the self.changes queue
+        so the user is able to undo the changes made on canvas
+        """
         if len(self.changes) == self.changes_max: 
             self.changes.pop(0)
         surface = pygame.Surface([self.config['cwidth'], self.config['cheight']], pygame.SRCALPHA, 32)
@@ -709,6 +867,10 @@ class MainWindow(tk.Frame):
         self.undone = []
 
     def c_undo(self):
+        """
+        Thus function lets undo change from self.changes queue and adds it to self.undone queue
+        so the user is able to redo the undone changes
+        """
         if self.locked or len(self.changes) == 0:
             return
 
@@ -722,6 +884,10 @@ class MainWindow(tk.Frame):
         self.undone.append({'id': data['id'], 'surface': redo})
 
     def c_redo(self):
+        """
+        Thus function lets redo change from self.undone queue and adds it to self.changes queue
+        so the user is able to undo the redone changes
+        """
         if self.locked or len(self.undone) == 0:
             return
 
@@ -735,6 +901,9 @@ class MainWindow(tk.Frame):
         self.changes.append({'id': data['id'], 'surface': undo})
 
     def c_add_layer(self):
+        """
+        This function allows adding a new layer to pygame canvas and tkinter GUI
+        """
         if self.locked:
             return
 
@@ -772,6 +941,12 @@ class MainWindow(tk.Frame):
         self.c_update_layers()
 
     def c_open_layer(self, id):
+        """
+        This function allows to switch which layer should be editable
+
+        Parameters:
+            id (int): Layer id
+        """
         if self.locked:
             return
 
@@ -780,12 +955,21 @@ class MainWindow(tk.Frame):
         self.c_cursor_layer()
 
     def c_cursor_layer(self):
+        """
+        This function shows changes about the layer that is currently being edited
+        """
         for i in range(len(self.layers)):
             if self.layers[i] != None:
                 self.layers[i]['elements'][3].config(image=self.layers_cursor_disabled)
         self.layers[self.layerID]['elements'][3].config(image=self.layers_cursor)
 
     def c_toggle_show_layer(self, id):
+        """
+        This function toggles the visibility of a layer
+
+        Parameters:
+            id (int): Layer id
+        """
         if self.layers[id]['visible']:
             self.layers[id]['elements'][4].config(image=self.layers_visible_disabled)
         else:
@@ -793,16 +977,36 @@ class MainWindow(tk.Frame):
         self.layers[id]['visible'] = not self.layers[id]['visible']
 
     def c_prompt_rename_layer(self, id):
+        """
+        This function prompts layer rename window to the user
+
+        Parameters:
+            id (int): Layer id
+        """
         self.layer_rename_entry_sv.set(self.layers[id]['name'])
         self.layer_rename_button.config(command=lambda: self.c_rename_layer(id, self.layer_rename_entry.get()))
         self.open_window('layer_rename')
 
     def c_rename_layer(self, id, value):
+        """
+        This function allows to change name of given layer
+
+        Parameters:
+            id (int): Layer id
+            value (string): New layer name
+        """
         self.close_window('layer_rename')
         self.layers[id]['name'] = value
         self.layers[id]['elements'][2].config(text=value)
 
     def c_move_layer(self, id, direction):
+        """
+        This function allows moving given layer in the layers tree
+
+        Parameters:
+            id (int): Layer id
+            direction (int): Direction (could be 1 or -1)
+        """
         while self.layers[id+direction] == None:
             direction += direction
 
@@ -860,6 +1064,12 @@ class MainWindow(tk.Frame):
         self.c_update_layers()
 
     def c_delete_layer(self, id):
+        """
+        This function allows to delete the given layer
+
+        Parameters:
+            id (int): Layer id
+        """
         if self.c_len_layers() == 1 or self.locked:
             return
 
@@ -884,6 +1094,9 @@ class MainWindow(tk.Frame):
         self.c_update_layers()
 
     def c_update_layers(self):
+        """
+        This function is responsible for propper layers display in tkitner
+        """
         cap = self.c_len_layers() - 1
         i = 0
         for layer in self.layers:
@@ -899,6 +1112,12 @@ class MainWindow(tk.Frame):
                 i+=1
 
     def c_len_layers(self):
+        """
+        This function returns the current layers count
+
+        Returns:
+            length (int): Layers count
+        """
         l = 0
         for layer in self.layers:
             if layer != None:
@@ -906,6 +1125,9 @@ class MainWindow(tk.Frame):
         return l
 
     def c_prompt_resize(self):
+        """
+        This function prompts canvas resize window to the user
+        """
         self.canvas_resize_entry_w_sv.set(self.config['cwidth'])
         self.canvas_resize_entry_h_sv.set(self.config['cheight'])
         self.canvas_resize_button.config(command=lambda: [
@@ -915,6 +1137,9 @@ class MainWindow(tk.Frame):
         self.open_window('canvas_resize')
 
     def c_prompt_new_size(self):
+        """
+        This function prompts new canvas size window to the user
+        """
         self.canvas_new_size_entry_w_sv.set(self.config['cwidth'])
         self.canvas_new_size_entry_h_sv.set(self.config['cheight'])
         self.canvas_new_size_button.config(command=lambda: [
@@ -924,6 +1149,13 @@ class MainWindow(tk.Frame):
         self.open_window('canvas_new_size')
 
     def c_resize(self, w, h):
+        """
+        This function lets change size of the canvas
+
+        Parameters:
+            w (int): New width of canvas
+            h (int): New height of canvas
+        """
         if self.locked:
             return
         
@@ -940,6 +1172,9 @@ class MainWindow(tk.Frame):
                 layer['surface'] = surface
 
     def c_prompt_import_image(self):
+        """
+        This function prompts image import window to the user
+        """
         self.image_import_img.config(image=self.image_import_empty)
         self.image_import_size_entry_x_sv.set(0)
         self.image_import_size_entry_y_sv.set(0)
@@ -955,6 +1190,12 @@ class MainWindow(tk.Frame):
         self.open_window('image_import')
 
     def c_image_import_select(self, filename):
+        """
+        This function is used to load and display the currently selected image to import
+
+        Parameters:
+            filename (string): Path to file
+        """
         if filename != '':
             self.image_to_import = {'r': Image.open(filename)}
             w, h = self.image_to_import['r'].size
@@ -978,6 +1219,13 @@ class MainWindow(tk.Frame):
             self.image_import_img.config(image=self.image_to_import['p'])
 
     def c_image_import_config(self, key, value):
+        """
+        This function is resposible for settings the image import flags value
+
+        Parameters:
+            key (string): Flag name
+            value (string): Flag value
+        """
         self.c_image_import_conf[key] = value
         if key == 'from':
             if value == 'yes':
@@ -995,6 +1243,16 @@ class MainWindow(tk.Frame):
                 self.image_import_size_entry_h.config(state='normal')
 
     def c_image_import(self, image, x, y, w, h):
+        """
+        This function is used for placing the image from prompted window on the canvas
+
+        Parameters:
+            image (Image): Image (PIL) to import
+            x (int): x coord on canvas
+            y (int): y coord on canvas
+            w (int): Width of the image
+            h (int): Height of the image
+        """
         if self.locked:
             return
     
@@ -1013,10 +1271,23 @@ class MainWindow(tk.Frame):
             self.layer['surface'].blit(py_image, (x,y))
 
     def c_capture(self, filename):
+        """
+        This function is used for exporting the canvas as an image
+
+        Parameters:
+            filename (string): File path
+        """
         if filename != '':
             pygame.image.save(self.canvas, filename)
 
     def c_save(self, filename):
+        """
+        This function is used to save the canvas as .paint file format
+        which contains the layers and size and pixels values
+
+        Parameters:
+            filename (string): File path
+        """
         if filename != '':
             file = "%dx%d\n" % (self.config['cwidth'], self.config['cheight'])
             for layer in self.layers:
@@ -1025,6 +1296,13 @@ class MainWindow(tk.Frame):
                 print(file, file=paint_file)
 
     def c_open(self, filename):
+        """
+        This function is used to load the canvas
+        from the .paint file format
+
+        Parameters:
+            filename (string): Path to file
+        """
         if self.locked:
             return
 
@@ -1046,6 +1324,10 @@ class MainWindow(tk.Frame):
                     self.layer['surface'].blit(pygame.image.fromstring(base64.b64decode(eval(surface_data)), (self.config['cwidth'], self.config['cheight']), 'RGBA'), (0,0))
 
     def c_new(self):
+        """
+        This function is used to create new blank canvas
+        and prompt new canvas size window to the user
+        """
         for layer in self.layers:
             for el in layer['elements']:
                 el.grid_forget()
@@ -1056,12 +1338,28 @@ class MainWindow(tk.Frame):
         self.c_prompt_new_size()
 
     def open_window(self, id):
+        """
+        This function is used to open given window
+
+        Parameters:
+            id (string): Window name in self.windows
+        """
         self.windows[id].wm_deiconify()
 
     def close_window(self, id):
+        """
+        This function is used to close given window
+
+        Parameters:
+            id (string): Window name in self.windows
+        """
         self.windows[id].wm_withdraw()
 
     def sync_windows(self, event=None):
+        """
+        This function is used to position 
+        the tools and layers windows on screen
+        """
         x, y = self.master.winfo_x(), self.master.winfo_y()
         w, h = self.master.winfo_screenwidth(), self.master.winfo_screenheight()
         mw, lw = self.master.winfo_width(), self.windows['layers'].winfo_width()
@@ -1079,12 +1377,18 @@ class MainWindow(tk.Frame):
             self.windows['layers'].attributes('-topmost', 'true')
 
     def change_config(self, master, key, value):
+        """
+        This function is used to save the config file changes
+        """
         global config
         config[master][key] = value
         with open('./user.cfg', 'w') as configfile:
             config.write(configfile)
 
     def on_exit(self):
+        """
+        This function is used for the "clean" application exit
+        """
         self.quit()
 
 if __name__ == '__main__':
